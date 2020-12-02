@@ -1,3 +1,4 @@
+from torchvision import transforms
 from fastbook import *
 
 class SiameseDataset(torch.utils.data.Dataset):
