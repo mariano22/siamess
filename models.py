@@ -27,23 +27,67 @@ class SiameseModelWithDistance(Module):
         """
     def __init__(self, arch, distance_fn, feature_dim=None):
         self.distance_fn = distance_fn
-        self.encoder = create_body(arch, n_in=1)
+        self.encoder_body = create_body(arch, n_in=1)
         if feature_dim is None:
-            self.head = nn.Sequential(AdaptiveConcatPool2d(), Flatten())
+            self.encoder_head = nn.Sequential(AdaptiveConcatPool2d(), Flatten())
         else:
-            self.head = create_head(512*2, feature_dim)
+            self.encoder_head = create_head(512*2, feature_dim)
+        self.encoder = nn.Sequential(self.encoder_body, self.encoder_head)
 
     def forward(self, x1, x2):
-        feat1 = self.head(self.encoder(x1))
-        feat2 = self.head(self.encoder(x2))
+        feat1 = self.encoder(x1)
+        feat2 = self.encoder(x2)
         return self.distance_fn(feat1,feat2)
 
 
-def test_model(m,dls):
+def test_model(m,dls,withdistance=False):
     b = dls.one_batch()
     with torch.no_grad():
         print(f't1.shape = {b[0].shape} t2.shape = {b[1].shape}')
+        print(f'encoder(t1).shape = {m.encoder(b[0]).shape} encoder(t2).shape = {m.encoder(b[1]).shape}')
+        if withdistance:
+            print(f'encoder_body(t1).shape = {m.encoder_body(b[0]).shape} encoder_body(t2).shape = {m.encoder_body(b[1]).shape}')
         print(f'target.shape = {b[2].shape}')
         print(f'out.shape = {m(b[0],b[1]).shape}')
 
 def see_params(m): return [p.shape for p in params(m)]
+
+def my_loss_func_trivial(dists, target):
+    return torch.where(target.bool(), dists, -dists).sum()
+
+def my_loss_func_LeCun(dist, target, margin=2, reduction='mean'):
+    assert reduction in ['mean', 'none']
+    neg_dist = torch.clamp(margin - dist, min=0.0)
+    res = torch.where(target.bool(), dist, -neg_dist).pow(2)
+    if reduction=='mean':
+        res = res.mean()
+    return 0.5 * res
+
+def accuracy_dist(inp, targ, thresh=1):
+    inp,targ = flatten_check(inp,targ)
+    return ((inp<thresh)==targ.bool()).float().mean()
+
+def similarity_with_cos(x,y): return sigmoid_range(F.cosine_similarity(x,y),0,2)
+
+def get_nn_learner(dls,fn_model=None):
+    if fn_model is None:
+        model = SiameseModelNN(resnet18).cuda()
+    else:
+        model = torch.load(fn_model).cuda()
+    return Learner(dls, model, loss_func = nn.BCEWithLogitsLoss(),
+                   metrics = accuracy_multi, splitter = siamese_splitter)
+
+def get_dist_learner(dls,fn_model=None, p_dist=2, margin=2):
+    #distance_function = F.pairwise_distance
+    distance_function = nn.PairwiseDistance(p=p_dist)
+    if fn_model is None:
+        model = SiameseModelWithDistance(resnet18, distance_function).cuda()
+    else:
+        model = torch.load(fn_model).cuda()
+    loss_func  = functools.partial(my_loss_func_LeCun, margin=margin)
+    return Learner(dls, model, loss_func = loss_func,  metrics = accuracy_dist)
+
+def thresh_finder(preds, targs, acc, x0, xf):
+    xs = torch.linspace(x0,xf)
+    accs = [ acc(preds, targs, thresh=x) for x in xs ]
+    plt.plot(xs,accs)
