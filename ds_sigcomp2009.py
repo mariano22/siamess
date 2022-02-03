@@ -8,12 +8,8 @@ import PIL
 import cv2
 
 def get_x(fn):
-    img=PIL.Image.open(fn)
-    _,img = cv2.threshold(cv2.GaussianBlur(np.array(img),(1,1),0),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    img=PIL.Image.fromarray(img)
-    img=PILImageBW(img)
-    t = ToTensor()(img).float()/255
-    return t
+    #_,img = cv2.threshold(cv2.GaussianBlur(np.array(img),(1,1),0),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    return PILImageBW.create(fn)
 
 def get_y(fn):
     if is_test(fn):
