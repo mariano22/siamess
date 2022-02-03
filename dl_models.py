@@ -7,7 +7,7 @@ class SiameseModelNN(Module):
         - arch is the basic archtecture for the encoder (i.e. resnet18) """
     def __init__(self, arch):
         self.encoder = create_body(arch,n_in=3)
-        self.head =create_head(512*2,1)
+        self.head =create_head(512*4,1)
 
     def forward(self, x1, x2):
         ftrs = torch.cat([self.encoder(x1), self.encoder(x2)], dim=1)
@@ -31,7 +31,7 @@ class SiameseModelWithDistance(Module):
         if feature_dim is None:
             self.encoder_head = nn.Sequential(AdaptiveConcatPool2d(), Flatten())
         else:
-            self.encoder_head = create_head(512*2, feature_dim)
+            self.encoder_head = create_head(512*4, feature_dim)
         self.encoder = nn.Sequential(self.encoder_body, self.encoder_head)
 
     def forward(self, x1, x2):
