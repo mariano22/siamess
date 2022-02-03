@@ -1,5 +1,5 @@
 from fastbook import *
-from models import *
+from dl_models import *
 from dataset_siamese import *
 
 def plotpca2d(xs_pca, ys, cls_start=None, n_cls=None):
