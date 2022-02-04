@@ -54,15 +54,20 @@ def top_loss(tlids, pred, y, loss, ds, fn_info=False, kind='all', limit = 50):
 class Interprete:
     def __init__(self, learn):
         self.learn = learn
-        self.tmodel = ['nn','dist'][isinstance(learn.model, SiameseModelWithDistance)]
+        if isinstance(learn.model, SiameseModelWithDistance):
+            self.model_type = 'dist'
+        elif isinstance(learn.model, SiameseModelNN):
+            self.model_type = 'mm'
+        else:
+            assert(False)
 
     def set_dl(self, dl, ds, d_thresh = 1):
         self.ds, self.ds = dl, ds
         self.act, self.y, self.loss = self.learn.get_preds(dl=dl, with_loss=True)
         if self.tmodel == 'nn':
-            self.pred = self.act.sigmoid()>0.5
+            self.pred = self.act.sigmoid() > 0.5
         else:
-            self.pred = self.act<d_thresh
+            self.pred = self.act < d_thresh
         self.ids = torch.argsort(self.loss, descending=True)
 
         # Accuracy
