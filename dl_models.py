@@ -9,12 +9,12 @@ class SiameseModelNN(Module):
         self.encoder = create_body(arch,n_in=3)
         self.head =create_head(512*4,1)
 
+    def splitter(model):
+        return [ params(model.encoder), params(model.head) ]
+
     def forward(self, x1, x2):
         ftrs = torch.cat([self.encoder(x1), self.encoder(x2)], dim=1)
         return self.head(ftrs).squeeze()
-
-def siamese_splitter(model):
-    return [ params(model.encoder), params(model.head) ]
 
 
 class SiameseModelWithDistance(Module):
@@ -39,16 +39,24 @@ class SiameseModelWithDistance(Module):
         feat2 = self.encoder(x2)
         return self.distance_fn(feat1,feat2)
 
+    def splitter(model):
+        return [ params(model.encoder_body), params(model.encoder_head) ]
+
 
 def test_model(m,dls,withdistance=False):
     b = dls.one_batch()
     with torch.no_grad():
         print(f't1.shape = {b[0].shape} t2.shape = {b[1].shape}')
-        print(f'encoder(t1).shape = {m.encoder(b[0]).shape} encoder(t2).shape = {m.encoder(b[1]).shape}')
+        e0 = m.encoder(b[0])
+        e1 = m.encoder(b[1])
+        print(f'encoder(t1).shape = {e0.shape} encoder(t2).shape = {e1.shape}')
         if hasattr(m, 'distance_fn'):
-            print(f'encoder_body(t1).shape = {m.encoder_body(b[0]).shape} encoder_body(t2).shape = {m.encoder_body(b[1]).shape}')
+            emb0 = m.encoder_body(b[0])
+            emb1 = m.encoder_body(b[1])
+            print(f'encoder_body(t1).shape = {emb0.shape} encoder_body(t2).shape = {emb1.shape}')
         print(f'target.shape = {b[2].shape}')
-        print(f'out.shape = {m(b[0],b[1]).shape}')
+        out = m(b[0],b[1])
+        print(f'out.shape = {out.shape}')
 
 def see_params(m): return [p.shape for p in params(m)]
 
