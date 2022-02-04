@@ -3,12 +3,11 @@ from tqdm import tqdm
 
 class SingleDS(torch.utils.data.Dataset):
     """ Dataset of single samples """
-    def __init__(self, fns, get_x, get_y, tsfm):
-        self.fns,self.get_x,self.get_y,self.tsfm = fns,get_x,get_y,tsfm
-        self.cls = { y:i for i,y in enumerate(set(map(get_y,fns))) }
+    def __init__(self, fns, get_x, get_y, cls):
+        self.fns,self.get_x,self.get_y,self.cls = fns,get_x,get_y,cls
 
     def __getitem__(self, i):
-        return ( self.tsfm(self.get_x(self.fns[i])), self.cls[self.get_y(self.fns[i])] )
+        return ( self.get_x(self.fns[i]), self.cls[self.get_y(self.fns[i])] )
 
     def __len__(self): return len(self.fns)
 
