@@ -32,10 +32,10 @@ def plotpca3d(xs_pca, ys, cls_start=None, n_cls=None):
     for i in range(cls_start,cls_start+n_cls):
         ax.plot3D(xs_pca[ys==i,0], xs_pca[ys==i,1], xs_pca[ys==i,2], '.', label=f'class {i}')
 
-def get_stats(fns, get_tensor, n_sample=1000):
+def get_stats(fns, get_x, n_sample=1000):
     if n_sample!='all':
         fns = random.sample(fns, min(len(fns),n_sample))
-    t = torch.stack([get_tensor(fn) for fn in fns])
+    t = torch.stack([IntToFloatTensor()(ToTensor()(Resize(460)(get_x(fn)))) for fn in fns])
     return t.mean(), t.std()
 
 def top_loss(tlids, pred, y, loss, ds, fn_info=False, kind='all', limit = 50):
