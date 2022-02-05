@@ -79,3 +79,57 @@ def thresh_finder(preds, targs, acc, x0, xf):
     xs = torch.linspace(x0,xf)
     accs = [ acc(preds, targs, thresh=x) for x in xs ]
     plt.plot(xs,accs)
+
+class Interpret:
+    def __init__(self, learn):
+        self.learn = learn
+        if isinstance(learn.model, SiameseModelWithDistance):
+            self.model_type = 'dist'
+        elif isinstance(learn.model, SiameseModelNN):
+            self.model_type = 'nn'
+        else:
+            assert(False)
+
+    def set_dl(self, dl, ds, d_thresh = 1):
+        self.ds, self.ds = dl, ds
+        self.inputs, self.act, self.y, self.loss = self.learn.get_preds(dl=dl, with_loss=True, with_input=True)
+        if self.model_type == 'nn':
+            self.prob = self.act.sigmoid()
+            self.pred = self.prob > 0.5
+        elif self.model_type == 'dist':
+            self.pred = self.act < d_thresh
+        else:
+            assert(False)
+        self.ids = torch.argsort(self.loss, descending=True)
+
+    def debug(self,idx):
+        assert(interp.ds[idx][2] == interp.y[idx])
+        print(f'y = {interp.y[idx]}')
+        print(f'pred = {interp.pred[idx]}')
+        print(f'loss = {interp.loss[idx]}')
+        print(f'act = {interp.act[idx]}')
+        print(f'prob = {interp.prob[idx]}')
+        display(interp.ds[idx][0])
+        display(interp.ds[idx][1])
+        show_image(self.inputs[0][idx]+1)
+        show_image(self.inputs[1][idx]+1)
+
+def stats(pred,y):
+    r = dict()
+    # Accuracy
+    r['acc'] = (pred==y).float().mean().item()
+    # Error rate
+    r['err'] = (pred!=y).float().mean().item()
+    # Falsos rechazos
+    r['frr'] = (y.bool() & (pred!=y)).float().mean().item()
+    # Falsas aceptaciones
+    r['far'] = (~y.bool() & (pred!=y)).float().mean().item()
+    # Precision
+    r['precision'] = ( (y.bool() & (pred==y)).float().sum() / y.bool().float().sum() ).item()
+    print(f'Accuracy: {r["acc"]}')
+    print(f'Error rate: {r["err"]}')
+    print(f'False Aceptation Ratio (errores no detectados): {r["frr"]}')
+    print(f'False Rejection Ratio (falsas alarmas): {r["far"]}')
+    print(f'Precision: {r["precision"]}')
+    print(f'Recall (1-FAR): {r["far"]}')
+    return r
