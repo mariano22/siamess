@@ -7,10 +7,10 @@ from datetime import datetime
 
 
 class SiameseImage(fastuple):
-    def show(self, ctx=None, **kwargs):
+    def show(self, ctx=None, more_info="", **kwargs):
         if len(self) > 2:
             img1,img2,similarity = self
-            match_msg = ['Not match','Match'][int(similarity)]
+            match_msg = ['y = 0','y = 1'][int(similarity)]
         else:
             img1,img2 = self
             similmatch_msgarity = 'Undetermined'
@@ -22,7 +22,7 @@ class SiameseImage(fastuple):
             t1,t2 = t1.permute(2,0,1),t2.permute(2,0,1)
         else: t1,t2 = img1,img2
         line = t1.new_zeros(t1.shape[0], t1.shape[1], 10)
-        return show_image(torch.cat([t1,line,t2], dim=2), title=match_msg, ctx=ctx, **kwargs)
+        return show_image(torch.cat([t1,line,t2], dim=2), title=match_msg + " " + more_info, ctx=ctx, **kwargs)
 
 @typedispatch
 def show_batch(x:SiameseImage, y, samples, ctxs=None, max_n=6, nrows=None, ncols=2, figsize=None, **kwargs):

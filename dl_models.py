@@ -113,23 +113,3 @@ class Interpret:
         display(interp.ds[idx][1])
         show_image(self.inputs[0][idx]+1)
         show_image(self.inputs[1][idx]+1)
-
-def stats(pred,y):
-    r = dict()
-    # Accuracy
-    r['acc'] = (pred==y).float().mean().item()
-    # Error rate
-    r['err'] = (pred!=y).float().mean().item()
-    # Falsos rechazos
-    r['frr'] = (y.bool() & (pred!=y)).float().mean().item()
-    # Falsas aceptaciones
-    r['far'] = (~y.bool() & (pred!=y)).float().mean().item()
-    # Precision
-    r['precision'] = ( (y.bool() & (pred==y)).float().sum() / y.bool().float().sum() ).item()
-    print(f'Accuracy: {r["acc"]}')
-    print(f'Error rate: {r["err"]}')
-    print(f'False Aceptation Ratio (errores no detectados): {r["frr"]}')
-    print(f'False Rejection Ratio (falsas alarmas): {r["far"]}')
-    print(f'Precision: {r["precision"]}')
-    print(f'Recall (1-FAR): {r["far"]}')
-    return r

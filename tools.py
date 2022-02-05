@@ -38,49 +38,37 @@ def get_stats(fns, get_x, n_sample=1000):
     t = torch.stack([IntToFloatTensor()(ToTensor()(Resize(460)(get_x(fn)))) for fn in fns])
     return t.mean(), t.std()
 
-def top_loss(tlids, pred, y, loss, ds, fn_info=False, kind='all', limit = 50):
+def plot_pred(interp,i, fn_info):
+    fn_info_str = f'{interp.ds.fns[i//2]} {interp.ds.fns[interp.ds.draw_memo[i]]}' if fn_info  else ''
+    title = f', pred = {interp.pred[i]}, prob = {interp.prob[i]}, loss = {interp.loss[i]:.4f}\n' + fn_info_str
+    SiameseImage(interp.ds[i][0], interp.ds[i][1], interp.ds[i][2]).show(more_info = title)
+    SiameseImage(interp.inputs[0][i]+1, interp.inputs[1][i]+1, interp.y[i]).show(more_info = title)
+
+def top_loss(interp, fn_info=False, kind='all', limit = 50):
     """ kind in {'all', 'frr', 'far'} """
     c = 0
-    for i in tlids:
-        if kind=='all' or (kind=='far' and ~y[i].bool()) or (kind=='frr' and y[i].bool()):
-            fn_info_str = f'{ds.fns[i//2]} {ds.fns[ds.draw_memo[i]]}' if fn_info  else ''
-            show_siamese(ds[i][0], ds[i][1], ds[i][2],
-                         more_info = f'pred:{pred[i]} loss:{loss[i]:.4f}' + fn_info_str,
-                         cmap='binary', figsize=(5,5))
+    for i in interp.ids:
+        if kind=='all' or (kind=='far' and ~interp.y[i].bool()) or (kind=='frr' and interp.y[i].bool()):
+            plot_pred(interp,i,fn_info)
             c+=1
             if c>=limit: break
 
-# Inspeccionando la validacion
-class Interprete:
-    def __init__(self, learn):
-        self.learn = learn
-        if isinstance(learn.model, SiameseModelWithDistance):
-            self.model_type = 'dist'
-        elif isinstance(learn.model, SiameseModelNN):
-            self.model_type = 'mm'
-        else:
-            assert(False)
-
-    def set_dl(self, dl, ds, d_thresh = 1):
-        self.ds, self.ds = dl, ds
-        self.act, self.y, self.loss = self.learn.get_preds(dl=dl, with_loss=True)
-        if self.tmodel == 'nn':
-            self.pred = self.act.sigmoid() > 0.5
-        else:
-            self.pred = self.act < d_thresh
-        self.ids = torch.argsort(self.loss, descending=True)
-
-        # Accuracy
-        self.acc = (self.pred==self.y).float().mean().item()
-        # Error rate
-        self.err = (self.pred!=self.y).float().mean().item()
-        # Falsos rechazos
-        self.frr = (self.y.bool() & (self.pred!=self.y)).float().mean().item()
-        # Falsas aceptaciones
-        self.far = (~self.y.bool() & (self.pred!=self.y)).float().mean().item()
-
-    def stats(self):
-        print(f'Accuracy: {self.acc}')
-        print(f'Error rate: {self.err}')
-        print(f'False Aceptation Ratio: {self.frr}')
-        print(f'False Rejection Ratio: {self.far}')
+def stats(pred,y):
+    r = dict()
+    # Accuracy
+    r['acc'] = (pred==y).float().mean().item()
+    # Error rate
+    r['err'] = (pred!=y).float().mean().item()
+    # Falsos rechazos
+    r['frr'] = (y.bool() & (pred!=y)).float().mean().item()
+    # Falsas aceptaciones
+    r['far'] = (~y.bool() & (pred!=y)).float().mean().item()
+    # Precision
+    r['precision'] = ( (y.bool() & (pred==y)).float().sum() / y.bool().float().sum() ).item()
+    print(f'Accuracy: {r["acc"]}')
+    print(f'Error rate: {r["err"]}')
+    print(f'False Aceptation Ratio (errores no detectados): {r["frr"]}')
+    print(f'False Rejection Ratio (falsas alarmas): {r["far"]}')
+    print(f'Precision: {r["precision"]}')
+    print(f'Recall (1-FAR): {r["far"]}')
+    return r
