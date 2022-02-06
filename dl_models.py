@@ -97,6 +97,7 @@ class Interpret:
             self.prob = self.act.sigmoid()
             self.pred = self.prob > 0.5
         elif self.model_type == 'dist':
+            self.prob = (self.act-d_thresh).sigmoid()
             self.pred = self.act < d_thresh
         else:
             assert(False)

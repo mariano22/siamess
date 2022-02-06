@@ -53,7 +53,7 @@ def top_loss(interp, fn_info=False, kind='all', limit = 50):
             c+=1
             if c>=limit: break
 
-def stats(pred,y):
+def calc_stats(pred,y):
     r = dict()
     # Accuracy
     r['acc'] = (pred==y).float().mean().item()
@@ -70,5 +70,5 @@ def stats(pred,y):
     print(f'False Aceptation Ratio (errores no detectados): {r["frr"]}')
     print(f'False Rejection Ratio (falsas alarmas): {r["far"]}')
     print(f'Precision: {r["precision"]}')
-    print(f'Recall (1-FAR): {r["far"]}')
+    print(f'Recall (1-FAR): {1-r["far"]}')
     return r
