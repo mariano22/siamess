@@ -1,36 +1,31 @@
-from fastbook import *
+from libraries_import_all import * 
+
+from visualization import *
 from dl_models import *
 from dataset_siamese import *
 
-def plotpca2d(xs_pca, ys, cls_start=None, n_cls=None):
-    assert (cls_start==None) == (n_cls==None)
-    if cls_start is None:
-        cls_start = 0
-        n_cls = len(set(ys.tolist()))
-    fig = plt.figure()
-    plt.title('Embeddings')
+def empty_dir(dir_fp):
+    print("Are you sure to delete {}? ['yes' for yes]".format(dir_fp))
+    if input()=='yes':
+        if os.path.isdir(dir_fp):
+            shutil.rmtree(dir_fp)
+        os.mkdir(dir_fp)
+    else:
+        assert False
 
-    cm = plt.get_cmap('gist_rainbow')
-    ax =  plt.axes()
-    ax.set_prop_cycle('color', [cm(1.*i/n_cls) for i in range(n_cls)])
+def preprocess_choose(img):
+    """ Choose between different preprocess methods. """
+    npimg = np.array(img)
+    _,otsu = cv2.threshold(npimg,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    _,otsugauss = cv2.threshold(cv2.GaussianBlur(npimg,(5,5),0),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    _,fixth = cv2.threshold(npimg,127,255,cv2.THRESH_BINARY)
+    adap = cv2.adaptiveThreshold(npimg,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,11,2)
+    adapgauss = cv2.adaptiveThreshold(npimg,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
 
-    for i in range(cls_start,cls_start+n_cls):
-        plt.plot(xs_pca[ys==i,0], xs_pca[ys==i,1], '.', label=f'class {i}')
-
-def plotpca3d(xs_pca, ys, cls_start=None, n_cls=None):
-    assert (cls_start==None) == (n_cls==None)
-    if cls_start is None:
-        cls_start = 0
-        n_cls = len(set(ys.tolist()))
-    fig = plt.figure(figsize=(10,10))
-    plt.title('Embeddings')
-
-    cm = plt.get_cmap('gist_rainbow')
-    ax = plt.axes(projection='3d')
-    ax.set_prop_cycle('color', [cm(1.*i/n_cls) for i in range(n_cls)])
-
-    for i in range(cls_start,cls_start+n_cls):
-        ax.plot3D(xs_pca[ys==i,0], xs_pca[ys==i,1], xs_pca[ys==i,2], '.', label=f'class {i}')
+    titles = ['Original Image', 'Global Thresholding (v = 127)',
+              'Adaptive Mean Thresholding', 'Adaptive Gaussian Thresholding', 'Otsu', 'Otsu+Gaussian']
+    images = [npimg, fixth, adap, adapgauss, otsu, otsugauss]
+    plot_images_grid(images,width=2, titles=titles, figsize=(10,6))
 
 def get_stats(fns, get_x, n_sample=1000):
     if n_sample!='all':
@@ -53,7 +48,9 @@ def top_loss(interp, fn_info=False, kind='all', limit = 50):
             c+=1
             if c>=limit: break
 
-def calc_stats(pred,y):
+def calc_stats(pred,y,):
+    if not isinstance(pred, torch.Tensor): pred = tensor(pred)
+    if not isinstance(y, torch.Tensor): y = tensor(y)
     r = dict()
     # Accuracy
     r['acc'] = (pred==y).float().mean().item()
@@ -65,10 +62,12 @@ def calc_stats(pred,y):
     r['far'] = (~y.bool() & (pred!=y)).float().mean().item()
     # Precision
     r['precision'] = ( (y.bool() & (pred==y)).float().sum() / y.bool().float().sum() ).item()
+    return r
+
+def print_stats(r):
     print(f'Accuracy: {r["acc"]}')
     print(f'Error rate: {r["err"]}')
     print(f'False Aceptation Ratio (errores no detectados): {r["frr"]}')
     print(f'False Rejection Ratio (falsas alarmas): {r["far"]}')
     print(f'Precision: {r["precision"]}')
     print(f'Recall (1-FAR): {1-r["far"]}')
-    return r
