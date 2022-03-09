@@ -4,6 +4,9 @@ from visualization import *
 from dl_models import *
 from dataset_siamese import *
 
+@patch
+def flatten(self:L): return L(x for xs in self for x in xs)
+
 def empty_dir(dir_fp):
     print("Are you sure to delete {}? ['yes' for yes]".format(dir_fp))
     if input()=='yes':
@@ -47,6 +50,16 @@ def top_loss(interp, fn_info=False, kind='all', limit = 50):
             plot_pred(interp,i,fn_info)
             c+=1
             if c>=limit: break
+
+def precision_score_recall_constrained(target, decision_values, required_recall=0.9):
+    precision, recall, thresholds = sklearn.metrics.precision_recall_curve(target,decision_values)
+    max_precision_by_recall = precision[recall>=required_recall].max()
+    t = thresholds[recall[:-1]>required_recall].max()
+    return max_precision_by_recall, t, (precision, recall, thresholds) 
+
+def precision_recall_accuracy_f1_scores(p,y,th):
+    pred = p >= th
+    return precision_score(y,pred), recall_score(y, pred), accuracy_score(y, pred), f1_score(y, pred)
 
 def calc_stats(pred,y,):
     if not isinstance(pred, torch.Tensor): pred = tensor(pred)

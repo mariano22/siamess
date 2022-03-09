@@ -12,3 +12,4 @@ import ds_omniglot
 from dataset_siamese import *
 from parodi import *
 from methodology import *
+from grid_search import *
